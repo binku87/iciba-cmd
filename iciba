@@ -1,0 +1,54 @@
+#!/usr/local/share/ruby1.8/bin/ruby
+require 'open-uri'
+require 'rexml/document'
+require 'cgi'
+include REXML
+
+class Iciba
+   
+  PRON_DIR = "/home/binku/.iciba_pron_tmp"
+  def initialize(word)
+    @word = word
+  end
+
+  def search
+    open("http://dict-co.iciba.com/api/dictionary.php?w=" + CGI::escape(@word)) do
+      |http| @result = http.read
+    end
+  end
+
+  def download_pron url
+    Dir.mkdir PRON_DIR unless File.directory? PRON_DIR
+    `wget -q -P #{PRON_DIR} #{url}`        
+  end
+
+  def play_pron file_name
+    `mpg123 -q #{PRON_DIR}/#{file_name}`
+    `rm -rf #{PRON_DIR}`
+  end
+
+  def parse
+    doc = Document.new(@result)
+    doc.elements.each("dict/key") { |e| puts e.text }
+    doc.elements.each("dict/ps") { |e| puts "[" + e.text + "]" }
+    doc.elements.each("dict/pron") do |e| 
+      download_pron e.text 
+      play_pron e.text.split("/").last
+    end
+    pos_array = []
+    doc.elements.each("dict/pos") { |e| pos_array << e.text }
+    acc_array = []
+    doc.elements.each("dict/acceptation") { |e| acc_array << e.text }
+    pos_array.each_index { |i| puts pos_array[i] + " " + acc_array[i] }
+    pos_array.clear
+    doc.elements.each("dict/sent/orig") { |e| pos_array.push(e.text) }
+    acc_array.clear
+    doc.elements.each("dict/sent/trans") { |e| acc_array.push(e.text) }
+    pos_array.each_index { |i| puts "例句" + (i+1).to_s + "：" + pos_array[i] + " " + acc_array[i] }
+  end
+end
+
+iciba = Iciba.new(ARGV[0])
+puts iciba.search
+iciba.parse
+
