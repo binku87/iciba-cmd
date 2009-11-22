@@ -5,8 +5,10 @@ require 'cgi'
 include REXML
 
 class Iciba
-   
-  PRON_DIR = "/home/binku/.iciba_pron_tmp"
+  
+  HOME_DIR = `echo $HOME`.delete "\n" 
+  PRON_DIR = "#{HOME_DIR}/.iciba_pron_tmp"
+
   def initialize(word)
     @word = word
   end
@@ -48,7 +50,11 @@ class Iciba
   end
 end
 
-iciba = Iciba.new(ARGV[0])
-puts iciba.search
-iciba.parse
+if ARGV[0]
+  iciba = Iciba.new(ARGV[0])
+  iciba.search
+  iciba.parse
+else
+  puts "please add the word needed to search" unless ARGV[0]
+end
 
