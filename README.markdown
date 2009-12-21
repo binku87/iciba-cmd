@@ -4,8 +4,11 @@ iciba-cmd is a command line tools which used to search words and play sound .
 
 
 ## How to setup ##
+1.Install nokogiri 
 
-1.Download mpg123
+  sudo gem install nokogiri 
+
+2.Download mpg123
 
   sudo apt-get install mpg123
 
@@ -18,4 +21,7 @@ iciba-cmd is a command line tools which used to search words and play sound .
 4.Usage:
 
   ~/Desktop$ iciba word 
+  ~/Desktop$ iciba "phrase" 
+  ~/Desktop$ iciba 爱词霸
+  
 
