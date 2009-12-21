@@ -1,8 +1,8 @@
 #!/usr/local/share/ruby1.8/bin/ruby
-require 'open-uri'
-require 'rexml/document'
+require 'rubygems'
 require 'cgi'
-include REXML
+require 'nokogiri'
+require 'open-uri'  
 
 class Iciba
   
@@ -14,9 +14,33 @@ class Iciba
   end
 
   def search
-    open("http://dict-co.iciba.com/api/dictionary.php?w=" + CGI::escape(@word)) do
-      |http| @result = http.read
+    (@word =~ /[a-zA-Z]/).nil? ? search_cn : search_en
+  end
+
+  def search_en
+    open("http://dict-co.iciba.com/api/dictionary.php?w=" + CGI::escape(@word)) { |http| @result = http.read }
+    doc = Nokogiri::HTML(open("http://dict-co.iciba.com/api/dictionary.php?w=" + CGI::escape(@word)))
+    puts doc.css("dict/key").text
+    puts "[#{doc.css("dict/ps").text}]"
+    doc.css("dict/pron").each do |e| 
+      download_pron e.text 
+      play_pron e.text.split("/").last
     end
+    pos_array,acc_array = [],[]
+    doc.css("dict/pos").each { |e| pos_array << e.text }
+    doc.css("dict/acceptation").each { |e| acc_array << e.text }
+    pos_array.each_index { |i| puts pos_array[i] + " " + acc_array[i] }
+    pos_array.clear
+    acc_array.clear
+    doc.css("dict/sent/orig").each { |e| pos_array << e.text }
+    doc.css("dict/sent/trans").each { |e| acc_array << e.text }
+    pos_array.each_index { |i| puts "例句" + (i+1).to_s + "：" + pos_array[i] + " " + acc_array[i] }
+  end
+
+  def search_cn
+    uri = URI.parse("http://www.iciba.com/" + CGI::escape(ARGV[0]))
+    doc = Nokogiri::HTML(open(uri))
+    doc.css("#sentence_close>.tab_content>.a_c_3").each { |item| puts item.text }
   end
 
   def download_pron url
@@ -25,36 +49,14 @@ class Iciba
   end
 
   def play_pron file_name
-    `mpg123 -q #{PRON_DIR}/#{file_name}`
+    `mpg123 #{PRON_DIR}/#{file_name}`
     `rm -rf #{PRON_DIR}`
-  end
-
-  def parse
-    doc = Document.new(@result)
-    doc.elements.each("dict/key") { |e| puts e.text }
-    doc.elements.each("dict/ps") { |e| puts "[" + e.text + "]" }
-    doc.elements.each("dict/pron") do |e| 
-      download_pron e.text 
-      play_pron e.text.split("/").last
-    end
-    pos_array = []
-    doc.elements.each("dict/pos") { |e| pos_array << e.text }
-    acc_array = []
-    doc.elements.each("dict/acceptation") { |e| acc_array << e.text }
-    pos_array.each_index { |i| puts pos_array[i] + " " + acc_array[i] }
-    pos_array.clear
-    doc.elements.each("dict/sent/orig") { |e| pos_array.push(e.text) }
-    acc_array.clear
-    doc.elements.each("dict/sent/trans") { |e| acc_array.push(e.text) }
-    pos_array.each_index { |i| puts "例句" + (i+1).to_s + "：" + pos_array[i] + " " + acc_array[i] }
   end
 end
 
 if ARGV[0]
   iciba = Iciba.new(ARGV[0])
   iciba.search
-  iciba.parse
 else
   puts "please add the word needed to search" unless ARGV[0]
 end
-
