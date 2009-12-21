@@ -20,8 +20,8 @@ iciba-cmd is a command line tools which used to search words and play sound .
 
 4.Usage:
 
-  ~/Desktop$ iciba word 
-  ~/Desktop$ iciba "phrase" 
+  ~/Desktop$ iciba word    
+  ~/Desktop$ iciba "phrase"  
   ~/Desktop$ iciba 爱词霸
   
 
