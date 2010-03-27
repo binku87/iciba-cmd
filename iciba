@@ -11,6 +11,7 @@ class Iciba
 
   def initialize(word)
     @word = word
+    Dir.mkdir PRON_DIR unless File.directory? PRON_DIR
   end
 
   def search
@@ -18,23 +19,29 @@ class Iciba
   end
 
   def search_en
-    open("http://dict-co.iciba.com/api/dictionary.php?w=" + CGI::escape(@word)) { |http| @result = http.read }
-    doc = Nokogiri::HTML(open("http://dict-co.iciba.com/api/dictionary.php?w=" + CGI::escape(@word)))
-    puts doc.css("dict/key").text
-    puts "[#{doc.css("dict/ps").text}]"
-    doc.css("dict/pron").each do |e|
-      download_pron e.text
-      play_pron e.text.split("/").last
+    unless File.exist?("#{PRON_DIR}/#{@word}")
+      file = File.open("#{PRON_DIR}/#{@word}","w")
+      doc = Nokogiri::HTML(open("http://dict-co.iciba.com/api/dictionary.php?w=" + CGI::escape(@word)))
+      file.puts doc.css("dict/key").text
+      file.puts "[#{doc.css("dict/ps").text}]"
+      doc.css("dict/pron").each do |e|
+        download_pron e.text
+      end
+      pos_array,acc_array = [],[]
+      doc.css("dict/pos").each { |e| pos_array << e.text }
+      doc.css("dict/acceptation").each { |e| acc_array << e.text }
+      pos_array.each_index { |i| file.puts pos_array[i] + " " + acc_array[i] }
+      pos_array.clear
+      acc_array.clear
+      doc.css("dict/sent/orig").each { |e| pos_array << e.text }
+      doc.css("dict/sent/trans").each { |e| acc_array << e.text }
+      pos_array.each_index { |i| file.puts "例句" + (i+1).to_s + "：" + pos_array[i] + " " + acc_array[i] }
+      file.close
     end
-    pos_array,acc_array = [],[]
-    doc.css("dict/pos").each { |e| pos_array << e.text }
-    doc.css("dict/acceptation").each { |e| acc_array << e.text }
-    pos_array.each_index { |i| puts pos_array[i] + " " + acc_array[i] }
-    pos_array.clear
-    acc_array.clear
-    doc.css("dict/sent/orig").each { |e| pos_array << e.text }
-    doc.css("dict/sent/trans").each { |e| acc_array << e.text }
-    pos_array.each_index { |i| puts "例句" + (i+1).to_s + "：" + pos_array[i] + " " + acc_array[i] }
+    File.open("#{PRON_DIR}/#{@word}","r") do |file|
+      while line=file.gets do puts line end
+    end
+    play_pron
   end
 
   def search_cn
@@ -44,13 +51,13 @@ class Iciba
   end
 
   def download_pron url
-    Dir.mkdir PRON_DIR unless File.directory? PRON_DIR
-    `wget -q -P #{PRON_DIR} #{url}`
+    unless File.exist?("#{PRON_DIR}/#{@word}.mp3")
+      `wget -o #{PRON_DIR}/tmp #{url} -O #{PRON_DIR}/#{@word}.mp3`
+    end
   end
 
-  def play_pron file_name
-    `mplayer #{PRON_DIR}/#{file_name}`
-    `rm -rf #{PRON_DIR}`
+  def play_pron
+    `mplayer #{PRON_DIR}/#{@word}.mp3 -really-quiet`
   end
 end
 
