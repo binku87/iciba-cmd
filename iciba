@@ -3,6 +3,7 @@ require 'rubygems'
 require 'cgi'
 require 'nokogiri'
 require 'open-uri'
+require 'colored'
 
 class Iciba
 
@@ -24,9 +25,7 @@ class Iciba
       doc = Nokogiri::HTML(open("http://dict-co.iciba.com/api/dictionary.php?w=" + CGI::escape(@word)))
       file.puts doc.css("dict/key").text
       file.puts "[#{doc.css("dict/ps").text}]"
-      doc.css("dict/pron").each do |e|
-        download_pron e.text
-      end
+      doc.css("dict/pron").each { |e| download_pron e.text }
       pos_array,acc_array = [],[]
       doc.css("dict/pos").each { |e| pos_array << e.text }
       doc.css("dict/acceptation").each { |e| acc_array << e.text }
@@ -39,7 +38,19 @@ class Iciba
       file.close
     end
     File.open("#{PRON_DIR}/#{@word}","r") do |file|
-      while line=file.gets do puts line end
+      #Show Key
+      puts file.gets.gsub("\n","").blue
+      #Show Pron
+      line = file.gets
+      puts line.gsub("\n","").magenta if line.gsub("\n","") != "[]"
+      #Show meaning
+      puts file.gets.gsub("\n","").cyan
+      odd_even = true
+      while line=file.gets do
+        color = odd_even ? "white" : "cyan"
+        puts line.gsub("\n","").send(color)
+        odd_even = !odd_even
+      end
     end
     play_pron
   end
@@ -51,9 +62,7 @@ class Iciba
   end
 
   def download_pron url
-    unless File.exist?("#{PRON_DIR}/#{@word}.mp3")
-      `wget -o #{PRON_DIR}/tmp #{url} -O #{PRON_DIR}/#{@word}.mp3`
-    end
+    `wget -o #{PRON_DIR}/tmp #{url} -O #{PRON_DIR}/#{@word}.mp3`
   end
 
   def play_pron
