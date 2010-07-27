@@ -1,4 +1,4 @@
-#!/usr/local/share/ruby1.8/bin/ruby
+#!/usr/bin/env ruby
 require 'rubygems'
 require 'cgi'
 require 'nokogiri'
